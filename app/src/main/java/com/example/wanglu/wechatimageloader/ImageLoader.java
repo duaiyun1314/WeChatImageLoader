@@ -35,7 +35,7 @@ public class ImageLoader {
      * 任务线程池
      */
     private ExecutorService mExecutors;
-    private static final int DEFUALT_THREAD_COUNT = 1;
+    private static final int DEFUALT_THREAD_COUNT = 4;
 
     /**
      * 后台轮询线程
@@ -87,10 +87,10 @@ public class ImageLoader {
                         Runnable runnable = null;
                         switch (type) {
                             case FIFO:
-                                runnable = mTaskQueue.removeLast();
+                                runnable = mTaskQueue.removeFirst();
                                 break;
                             case LIFO:
-                                runnable = mTaskQueue.removeFirst();
+                                runnable = mTaskQueue.removeLast();
                                 break;
                         }
                         mExecutors.execute(runnable);
@@ -211,7 +211,7 @@ public class ImageLoader {
         holder.imageView = imageview;
         holder.path = path;
         msg.obj = holder;
-        mUIHandler.sendEmptyMessage(0x110);
+        mUIHandler.sendMessage(msg);
     }
 
     /**
@@ -326,12 +326,14 @@ public class ImageLoader {
     private synchronized void addTask(Runnable runnable) {
         mTaskQueue.add(runnable);//单纯的这种方法会导致来一个任务就会马上取出放到线程池里面，最后会堆积在线程池内部队列里面
         //也就无所谓先进先出和后进先出了，于是利用信号量让线程池最多放三个（设置三个信号量），完成一个任务就释放一个信号量
-        if (mPoolThreadHandler == null)
-            try {
+        try {
+            if (mPoolThreadHandler == null) {
                 mPoolThreadHandlerSemaphore.acquire();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         mPoolThreadHandler.sendEmptyMessage(0x110);
     }
 }
